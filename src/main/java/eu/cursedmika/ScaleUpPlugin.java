@@ -7,8 +7,6 @@ import net.runelite.api.events.GameTick;
 import net.runelite.api.events.ItemContainerChanged;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.eventbus.Subscribe;
-import net.runelite.client.game.ItemManager;
-import net.runelite.client.game.SkillIconManager;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.ui.ClientToolbar;
@@ -16,6 +14,7 @@ import net.runelite.client.ui.NavigationButton;
 import net.runelite.client.util.ImageUtil;
 
 import javax.inject.Inject;
+import javax.swing.*;
 import java.awt.image.BufferedImage;
 
 import static net.runelite.api.gameval.InventoryID.BANK;
@@ -31,10 +30,6 @@ public class ScaleUpPlugin extends Plugin
 	private ClientToolbar clientToolbar;
 	@Inject
 	private TrackingService trackingService;
-	@Inject
-	private SkillIconManager skillIconManager;
-	@Inject
-	private ItemManager itemManager;
 	@Inject
 	private ClientThread clientThread;
 	@Inject
@@ -53,7 +48,7 @@ public class ScaleUpPlugin extends Plugin
 	@Override
 	protected void startUp()
 	{
-		scaleUpPanel = new ScaleUpPanel(trackingService, itemManager, skillIconManager, clientThread);
+		scaleUpPanel = new ScaleUpPanel(trackingService, clientThread);
 		BufferedImage icon = ImageUtil.loadImageResource(getClass(), "/scaleup.png");
 		this.navButton = NavigationButton.builder()
 				.tooltip("ScaleUp")
@@ -72,10 +67,8 @@ public class ScaleUpPlugin extends Plugin
 			ItemContainer bankContainer = event.getItemContainer();
 			if (bankContainer != null)
 			{
-				clientThread.invokeAtTickEnd(() -> {
-					itemCollector.snapshotBankItems(bankContainer);
-					trackingService.handleBankData();
-				});
+				itemCollector.snapshotBankItems(bankContainer);
+				trackingService.handleBankData();
 			}
 		}
 	}
@@ -88,12 +81,11 @@ public class ScaleUpPlugin extends Plugin
 		}
 
 		incrementRefresh();
+
 		if(shouldRefresh())
 		{
-			clientThread.invokeLater(() -> {
-				trackingService.snapshot();
-				scaleUpPanel.updateUI(trackingService.getComputedSnapshot());
-			});
+			trackingService.snapshot();
+			SwingUtilities.invokeLater(() -> scaleUpPanel.updateUI(trackingService.getComputedSnapshot()));
 		}
 	}
 

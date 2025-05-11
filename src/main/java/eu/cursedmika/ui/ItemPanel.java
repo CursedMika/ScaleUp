@@ -4,54 +4,44 @@ import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import java.awt.image.BufferedImage;
-import java.util.HashMap;
-import java.util.Map;
 
-import net.runelite.api.ItemComposition;
-import net.runelite.client.game.ItemManager;
+import eu.cursedmika.TrackingService;
 import net.runelite.client.util.ImageUtil;
 
 public class ItemPanel extends JPanel
 {
-        private final ItemManager itemManager;
         private final Font quantityFont = new Font(Font.SANS_SERIF, Font.BOLD, 16);
 
-        public ItemPanel(ItemManager itemManager)
+        public ItemPanel()
         {
-            this.itemManager = itemManager;
             setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
             setBorder(new EmptyBorder(5, 5, 5, 5));
         }
 
-        public void updateItems(HashMap<Integer, Integer> itemChanges)
+        public void updateItems(java.util.List<TrackingService.ComputedSnapshot.ComputedItem> itemChanges)
         {
             removeAll();
 
-            for (Map.Entry<Integer, Integer> entry : itemChanges.entrySet())
+            for (var item : itemChanges)
             {
-                int itemId = entry.getKey();
-                int quantityChange = entry.getValue();
-
                 JPanel itemRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
                 itemRow.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-                ItemComposition itemComposition = itemManager.getItemComposition(itemId);
-                BufferedImage itemImage = itemManager.getImage(itemId);
-                JLabel imageLabel = new JLabel(new ImageIcon(itemImage));
+                JLabel imageLabel = new JLabel(new ImageIcon(item.getImage()));
 
-                JLabel nameLabel = new JLabel(itemComposition.getName());
+                JLabel nameLabel = new JLabel(item.getName());
 
-                JLabel quantityLabel = new JLabel(Integer.toString(Math.abs(quantityChange)));
+                JLabel quantityLabel = new JLabel(Integer.toString(Math.abs(item.getDiff())));
                 quantityLabel.setFont(quantityFont);
 
                 JLabel arrowLabel = new JLabel();
                 BufferedImage arrowIcon;
-                if (quantityChange > 0)
+                if (item.getDiff() > 0)
                 {
                     arrowIcon = ImageUtil.loadImageResource(getClass(), "/arrow_up.png");
                     arrowLabel.setForeground(new Color(0, 150, 0));
                 }
-                else if (quantityChange < 0)
+                else if (item.getDiff() < 0)
                 {
                     arrowIcon = ImageUtil.loadImageResource(getClass(), "/arrow_down.png");
                     arrowLabel.setForeground(new Color(150, 0, 0));

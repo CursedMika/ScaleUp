@@ -1,9 +1,13 @@
 package eu.cursedmika;
 
+import net.runelite.api.ItemComposition;
 import net.runelite.api.Skill;
+import net.runelite.client.game.ItemManager;
+import net.runelite.client.game.SkillIconManager;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
+import java.awt.image.BufferedImage;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.*;
@@ -16,12 +20,16 @@ public class TrackingService
     private final ItemCollector itemCollector;
     private ComputedSnapshot computedSnapshot = null;
     private final AtomicBoolean isTracking = new AtomicBoolean(false);
+    private final SkillIconManager skillIconManager;
+    private final ItemManager itemManager;
 
     @Inject
-    public TrackingService(SkillCollector skillCollector, ItemCollector itemCollector)
+    public TrackingService(SkillCollector skillCollector, ItemCollector itemCollector, SkillIconManager skillIconManager, ItemManager itemManager)
     {
         this.skillCollector = skillCollector;
         this.itemCollector = itemCollector;
+        this.skillIconManager = skillIconManager;
+        this.itemManager = itemManager;
     }
 
     private final List<TrackedSnapshot> trackedSnapshots = new ArrayList<>();
@@ -85,7 +93,8 @@ public class TrackingService
             var diff = Math.abs(next.trackedSkills.get(skill) - previous.trackedSkills.get(skill));
             if(diff != 0)
             {
-                computedSnapshot.computedSkills.put(skill, diff);
+                BufferedImage skillImage = skillIconManager.getSkillImage(skill);
+                computedSnapshot.computedSkills.add(new ComputedSnapshot.ComputedSkill(skill, diff, skillImage, skill.getName()));
             }
         }
 
@@ -98,7 +107,10 @@ public class TrackingService
             var diff = (next.trackedItems.get(item) == null ? 0 : next.trackedItems.get(item)) - (previous.trackedItems.get(item) == null ? 0 : previous.trackedItems.get(item));
             if(diff != 0)
             {
-                computedSnapshot.computedItems.put(item, diff);
+                ItemComposition itemComposition = itemManager.getItemComposition(item);
+                BufferedImage itemImage = itemManager.getImage(item);
+
+                computedSnapshot.computedItems.add(new ComputedSnapshot.ComputedItem(item, diff, itemImage, itemComposition.getName()));
             }
         }
 
@@ -148,23 +160,23 @@ public class TrackingService
 
     public static class ComputedSnapshot
     {
-        private HashMap<Skill, Integer> computedSkills;
-        private HashMap<Integer, Integer> computedItems;
-        private long durationInSeconds;
+        private final List<ComputedSkill> computedSkills;
+        private final List<ComputedItem> computedItems;
+        private final long durationInSeconds;
 
         public ComputedSnapshot(long durationInSeconds)
         {
             this.durationInSeconds = durationInSeconds;
-            this.computedSkills = new HashMap<>();
-            this.computedItems = new HashMap<>();
+            this.computedSkills = new ArrayList<>();
+            this.computedItems = new ArrayList<>();
         }
 
-        public HashMap<Skill, Integer> getComputedSkills()
+        public List<ComputedSkill> getComputedSkills()
         {
             return computedSkills;
         }
 
-        public HashMap<Integer, Integer> getComputedItems()
+        public List<ComputedItem> getComputedItems()
         {
             return computedItems;
         }
@@ -177,6 +189,80 @@ public class TrackingService
         public long getDurationInSeconds()
         {
             return durationInSeconds;
+        }
+
+        public static class ComputedSkill
+        {
+            private final Skill skill;
+            private final int diff;
+            private final BufferedImage image;
+            private final String name;
+
+            public ComputedSkill(Skill skill, int diff, BufferedImage image, String name)
+            {
+                this.skill = skill;
+                this.diff = diff;
+                this.image = image;
+                this.name = name;
+            }
+
+            public ComputedSkill(ComputedSkill computedSkill, double scale)
+            {
+                this(computedSkill.skill, (int) (computedSkill.diff * scale), computedSkill.image, computedSkill.name);
+            }
+
+            public String getName() {
+                return name;
+            }
+
+            public Skill getSkill() {
+                return skill;
+            }
+
+            public int getDiff() {
+                return diff;
+            }
+
+            public BufferedImage getImage() {
+                return image;
+            }
+        }
+
+        public static class ComputedItem
+        {
+            private final int id;
+            private final int diff;
+            private final String name;
+            private final BufferedImage image;
+
+            public ComputedItem(int id, int diff, BufferedImage image, String name)
+            {
+                this.id = id;
+                this.diff = diff;
+                this.image = image;
+                this.name = name;
+            }
+
+            public ComputedItem(ComputedItem computedItem, double scale)
+            {
+                this(computedItem.id, (int) (computedItem.diff * scale), computedItem.image, computedItem.name);
+            }
+
+            public String getName() {
+                return name;
+            }
+
+            public int getId() {
+                return id;
+            }
+
+            public int getDiff() {
+                return diff;
+            }
+
+            public BufferedImage getImage() {
+                return image;
+            }
         }
     }
 }

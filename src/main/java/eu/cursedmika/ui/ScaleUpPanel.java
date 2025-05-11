@@ -2,8 +2,6 @@ package eu.cursedmika.ui;
 
 import eu.cursedmika.TrackingService;
 import net.runelite.client.callback.ClientThread;
-import net.runelite.client.game.ItemManager;
-import net.runelite.client.game.SkillIconManager;
 import net.runelite.client.ui.PluginPanel;
 
 import javax.swing.*;
@@ -18,15 +16,11 @@ public class ScaleUpPanel extends PluginPanel
 
     private final JPanel computedPanel = new JPanel();
     private final JButton snapshotButton = new JButton("SNAPSHOT");
-    private final ItemManager itemManager;
-    private final SkillIconManager skillIconManager;
     private final ClientThread clientThread;
 
-    public ScaleUpPanel(TrackingService trackingService, ItemManager itemManager, SkillIconManager skillIconManager, ClientThread clientThread)
+    public ScaleUpPanel(TrackingService trackingService, ClientThread clientThread)
     {
         this.trackingService = trackingService;
-        this.itemManager = itemManager;
-        this.skillIconManager = skillIconManager;
         this.clientThread = clientThread;
 
         setBorder(new EmptyBorder(10, 10, 10, 10));
@@ -76,15 +70,20 @@ public class ScaleUpPanel extends PluginPanel
         snapshotButton.addActionListener(startSnapshot());
 
         JButton clear = new JButton("CLEAR");
-        clear.addActionListener(e -> clientThread.invokeAtTickEnd(() -> {
-            trackingService.stopTracking();
-            trackingService.clear();
+        clear.addActionListener(e ->
+        {
+            clientThread.invokeAtTickEnd(() ->
+            {
+                trackingService.stopTracking();
+                trackingService.clear();
+            });
+
             stopSnapshot().actionPerformed(null);
             computedPanel.removeAll();
             computedPanel.repaint();
             computedPanel.revalidate();
             computedPanel.getParent().repaint();
-        }));
+        });
 
         wrapper.add(snapshotButton);
         wrapper.add(clear);
@@ -99,9 +98,10 @@ public class ScaleUpPanel extends PluginPanel
             return;
         }
         computedPanel.removeAll();
-        ItemPanel itemPanel = new ItemPanel(itemManager);
-        SkillPanel skillPanel = new SkillPanel(skillIconManager);
-        JLabel snapshotDuration = new JLabel("DURATION: "+computedSnapshot.getDurationInMinutes()+" minutes");;
+        SkillPanel skillPanel = new SkillPanel();
+        ItemPanel itemPanel = new ItemPanel();
+
+        JLabel snapshotDuration = new JLabel("DURATION: "+computedSnapshot.getDurationInMinutes()+" minutes");
         SliderPanel sliderPanel = new SliderPanel();
         JButton scale = new JButton("SCALE TO 1 HOUR");
 
@@ -109,19 +109,19 @@ public class ScaleUpPanel extends PluginPanel
         skillPanel.updateSkills(computedSnapshot.getComputedSkills());
 
         sliderPanel.addChangeListener(e ->
-                clientThread.invokeAtTickEnd(() -> {
-                    double scaleFactor = sliderPanel.getSliderValue();
+        {
+            double scaleFactor = sliderPanel.getSliderValue();
 
-                    TrackingService.ComputedSnapshot newSnapshot = new TrackingService.ComputedSnapshot((int)(computedSnapshot.getDurationInSeconds() * scaleFactor));
-                    computedSnapshot.getComputedItems().forEach((k,v) -> newSnapshot.getComputedItems().put(k, (int)(v*scaleFactor)));
-                    computedSnapshot.getComputedSkills().forEach((k,v) -> newSnapshot.getComputedSkills().put(k, (int)(v*scaleFactor)));
-                    itemPanel.updateItems(newSnapshot.getComputedItems());
-                    skillPanel.updateSkills(newSnapshot.getComputedSkills());
-                    snapshotDuration.setText("DURATION: "+newSnapshot.getDurationInMinutes()+" minutes");;
-                    computedPanel.repaint();
-                    computedPanel.revalidate();
-                    computedPanel.getParent().repaint();
-                }));
+            TrackingService.ComputedSnapshot newSnapshot = new TrackingService.ComputedSnapshot((int)(computedSnapshot.getDurationInSeconds() * scaleFactor));
+            computedSnapshot.getComputedItems().forEach((v) -> newSnapshot.getComputedItems().add(new TrackingService.ComputedSnapshot.ComputedItem(v, scaleFactor)));
+            computedSnapshot.getComputedSkills().forEach((v) -> newSnapshot.getComputedSkills().add(new TrackingService.ComputedSnapshot.ComputedSkill(v, scaleFactor)));
+            itemPanel.updateItems(newSnapshot.getComputedItems());
+            skillPanel.updateSkills(newSnapshot.getComputedSkills());
+            snapshotDuration.setText("DURATION: "+newSnapshot.getDurationInMinutes()+" minutes");
+            computedPanel.repaint();
+            computedPanel.revalidate();
+            computedPanel.getParent().repaint();
+        });
 
         scale.addActionListener(e -> sliderPanel.setSliderValue(3600D/computedSnapshot.getDurationInSeconds()));
         itemPanel.setAlignmentX(Component.LEFT_ALIGNMENT);

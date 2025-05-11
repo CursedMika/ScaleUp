@@ -4,7 +4,6 @@ import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.event.ChangeListener;
 import java.awt.*;
-import java.text.NumberFormat;
 
 public class SliderPanel extends JPanel
 {
@@ -41,10 +40,5 @@ public class SliderPanel extends JPanel
     public void setSliderValue(double value)
     {
         model.setValue(value);
-    }
-
-    public JSpinner getSlider()
-    {
-        return spinner;
     }
 }
